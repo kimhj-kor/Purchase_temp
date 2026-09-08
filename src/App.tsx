@@ -328,9 +328,20 @@ export default function App() {
 
   const handleLogout = async () => {
     if (supabase) {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error('SignOut error:', e);
+      }
+    }
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('supabase.auth.token') || key.includes('sb-') || key.includes('custom_supabase_'))) {
+        localStorage.removeItem(key);
+      }
     }
     setSession(null);
+    window.location.reload();
   };
 
   const sqlSchemaText = `-- 1. purchase_quotes 테이블 생성 (누적 저장용)
