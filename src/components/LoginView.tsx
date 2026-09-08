@@ -14,10 +14,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Allow custom setting if env vars are not set
-  const [customUrl, setCustomUrl] = useState('');
-  const [customKey, setCustomKey] = useState('');
-  const [showConfigModal, setShowConfigModal] = useState(!isSupabaseConfigured);
+  const [customUrl, setCustomUrl] = useState(localStorage.getItem('custom_supabase_url') || metaEnvGet('VITE_SUPABASE_URL') || '');
+  const [customKey, setCustomKey] = useState(localStorage.getItem('custom_supabase_key') || metaEnvGet('VITE_SUPABASE_ANON_KEY') || '');
+  const [showConfig, setShowConfig] = useState(!isSupabaseConfigured);
+
+  function metaEnvGet(key: string) {
+    try {
+      return (import.meta as any).env?.[key] || '';
+    } catch {
+      return '';
+    }
+  }
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +34,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
     const activeClient = supabase;
     if (!activeClient) {
-      setErrorMsg('Supabase 클라이언트가 초기화되지 않았습니다. 설정 정보를 확인해 주세요.');
+      setErrorMsg('Supabase 클라이언트가 초기화되지 않았습니다. 아래 "Supabase 연결 설정"에서 URL과 Anon Key를 입력해주세요.');
       setLoading(false);
+      setShowConfig(true);
       return;
     }
 
@@ -62,52 +70,91 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       alert('Supabase URL과 Anon Key를 모두 입력해주세요.');
       return;
     }
-    localStorage.setItem('custom_supabase_url', customUrl);
-    localStorage.setItem('custom_supabase_key', customKey);
+    localStorage.setItem('custom_supabase_url', customUrl.trim());
+    localStorage.setItem('custom_supabase_key', customKey.trim());
+    alert('Supabase 설정이 저장되었습니다. 페이지를 새로고침합니다.');
     window.location.reload();
+  };
+
+  const handleClearConfig = () => {
+    if (confirm('저장된 커스텀 Supabase 설정을 초기화하시겠습니까?')) {
+      localStorage.removeItem('custom_supabase_url');
+      localStorage.removeItem('custom_supabase_key');
+      window.location.reload();
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden p-8">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="bg-blue-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-bold text-white tracking-tight">구매 견적 비교·납기 판정기</h1>
           <p className="text-xs text-slate-400 mt-1">Supabase 인가된 사용자 인증 시스템</p>
+
+          <button
+            onClick={() => setShowConfig(!showConfig)}
+            className="mt-3 inline-flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition border border-slate-700/60"
+          >
+            <Database className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{showConfig ? '▲ Supabase 연결 설정 닫기' : '⚙️ Supabase 연결 설정 (URL / Key 입력)'}</span>
+          </button>
         </div>
 
-        {!isSupabaseConfigured && !localStorage.getItem('custom_supabase_url') && (
-          <div className="mb-6 p-4 bg-amber-950/50 border border-amber-800/60 rounded-xl text-amber-200 text-xs">
-            <div className="flex items-center space-x-2 font-semibold mb-1">
-              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Supabase 환경 변수 미감지</span>
+        {showConfig && (
+          <div className="mb-6 p-4 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs shadow-inner">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-semibold text-slate-300 flex items-center space-x-1">
+                <Database className="w-4 h-4 text-emerald-400" />
+                <span>Supabase 프로젝트 연결 설정</span>
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${isSupabaseConfigured ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' : 'bg-amber-900/60 text-amber-300 border border-amber-700'}`}>
+                {isSupabaseConfigured ? '연결됨' : '미연결'}
+              </span>
             </div>
-            <p className="text-slate-300 mb-3">
-              .env에 Supabase 설정이 없거나 커스텀 프로젝트를 연동하려면 아래에 Supabase URL과 Anon Key를 입력하세요.
+            <p className="text-slate-400 mb-3 text-[11px]">
+              Supabase 대시보드(Project Settings &gt; API)에서 발급받은 Project URL과 anon/public key를 입력하세요.
             </p>
             <form onSubmit={handleSaveConfig} className="space-y-2">
-              <input
-                type="text"
-                placeholder="Supabase Project URL"
-                value={customUrl}
-                onChange={e => setCustomUrl(e.target.value)}
-                className="w-full p-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white"
-              />
-              <input
-                type="password"
-                placeholder="Supabase Anon Key"
-                value={customKey}
-                onChange={e => setCustomKey(e.target.value)}
-                className="w-full p-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white"
-              />
-              <button
-                type="submit"
-                className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded-lg text-xs transition"
-              >
-                설정 저장 및 새로고침
-              </button>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-400 mb-1">Supabase URL</label>
+                <input
+                  type="text"
+                  placeholder="https://xyzproject.supabase.co"
+                  value={customUrl}
+                  onChange={e => setCustomUrl(e.target.value)}
+                  className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-400 mb-1">Supabase Anon Key</label>
+                <input
+                  type="password"
+                  placeholder="eyJhbGciOi..."
+                  value={customKey}
+                  onChange={e => setCustomKey(e.target.value)}
+                  className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
+                />
+              </div>
+              <div className="flex space-x-2 pt-1">
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-xs transition shadow"
+                >
+                  설정 저장 및 새로고침
+                </button>
+                {localStorage.getItem('custom_supabase_url') && (
+                  <button
+                    type="button"
+                    onClick={handleClearConfig}
+                    className="px-3 py-2 bg-rose-900/60 hover:bg-rose-800 text-rose-200 font-medium rounded-lg text-xs transition"
+                  >
+                    초기화
+                  </button>
+                )}
+              </div>
             </form>
           </div>
         )}
