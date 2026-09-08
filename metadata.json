@@ -1,0 +1,6 @@
+{
+  "name": "구매 견적 비교 및 납기 판정기",
+  "description": "구매요청별 복수 공급사 견적 CSV 반입, 최저가 선정, 단가 이상치 판정, 납기 지연/임박 3구간 평가 및 품목명 표기 상이 검출기",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
