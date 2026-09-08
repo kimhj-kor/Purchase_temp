@@ -38,5 +38,11 @@ const rawKey = metaEnv.VITE_SUPABASE_ANON_KEY || localStorage.getItem('custom_su
 export const isSupabaseConfigured = isValidUrl(rawUrl) && isValidKey(rawKey);
 
 export const supabase = isSupabaseConfigured
-  ? createClient(rawUrl, rawKey)
+  ? createClient(rawUrl, rawKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null;
