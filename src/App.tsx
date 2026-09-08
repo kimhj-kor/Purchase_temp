@@ -329,19 +329,26 @@ export default function App() {
   const handleLogout = async () => {
     if (supabase) {
       try {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: 'global' });
       } catch (e) {
         console.error('SignOut error:', e);
       }
     }
+    // Thoroughly remove all Supabase and auth tokens from localStorage and sessionStorage
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
-      if (key && (key.includes('supabase.auth.token') || key.includes('sb-') || key.includes('custom_supabase_'))) {
+      if (key && (key.includes('supabase') || key.includes('sb-') || key.includes('auth'))) {
         localStorage.removeItem(key);
       }
     }
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const key = sessionStorage.key(i);
+      if (key && (key.includes('supabase') || key.includes('sb-') || key.includes('auth'))) {
+        sessionStorage.removeItem(key);
+      }
+    }
     setSession(null);
-    window.location.reload();
+    window.location.replace(window.location.pathname);
   };
 
   const sqlSchemaText = `-- 1. purchase_quotes 테이블 생성 (누적 저장용)
